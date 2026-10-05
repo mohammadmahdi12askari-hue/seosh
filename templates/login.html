@@ -1,0 +1,304 @@
+<!doctype html>
+<html lang="fa" dir="rtl">
+<head>
+<meta charset="utf-8">
+<title>پنل مدیریت</title>
+<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.rtl.min.css" rel="stylesheet">
+<style>
+:root{--bg:#0f1115;--card:#181b22;--bd:#2a2f3a;--txt:#e8e8e8;--muted:#8b93a7;--accent:#3b82f6}
+body{background:var(--bg);color:var(--txt);font-family:Tahoma;margin:0;padding:0}
+.navbar{background:var(--card);border-bottom:1px solid var(--bd);padding:14px 20px;display:flex;justify-content:space-between;align-items:center}
+.navbar h4{margin:0}
+.container{max-width:1100px;margin:24px auto;padding:0 16px}
+.tabs{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:20px}
+.tab{padding:10px 16px;background:var(--card);border:1px solid var(--bd);border-radius:10px;cursor:pointer;color:var(--txt)}
+.tab.active{background:var(--accent);border-color:var(--accent);color:#fff}
+.card{background:var(--card);border:1px solid var(--bd);border-radius:14px;padding:20px;margin-bottom:16px}
+.card h5{margin-top:0}
+input,textarea,select{width:100%;padding:10px;background:#0f1115;border:1px solid var(--bd);color:#fff;border-radius:8px;margin-bottom:10px;font-family:Tahoma}
+button.btn-main{padding:10px 18px;background:var(--accent);border:0;color:#fff;border-radius:8px;font-weight:bold;cursor:pointer}
+button.btn-danger{background:#ef4444;border:0;color:#fff;padding:8px 14px;border-radius:8px;cursor:pointer}
+button.btn-warn{background:#f59e0b;border:0;color:#000;padding:8px 14px;border-radius:8px;cursor:pointer;font-weight:bold}
+.stats{display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:12px}
+.stat{background:#0f1115;border:1px solid var(--bd);border-radius:10px;padding:16px}
+.stat .n{font-size:22px;font-weight:bold;color:var(--accent)}
+.stat .l{color:var(--muted);font-size:13px;margin-top:4px}
+#logbox{background:#05070a;border:1px solid var(--bd);border-radius:10px;height:420px;overflow-y:auto;padding:14px;font-family:Consolas,monospace;font-size:13px;direction:ltr;text-align:left}
+.log-info{color:#cbd5e1}
+.log-success{color:#22c55e}
+.log-error{color:#ef4444}
+.log-warn{color:#f59e0b}
+.progress{height:8px;background:#0f1115;border-radius:6px;overflow:hidden;margin-top:8px}
+.progress > div{height:100%;background:linear-gradient(90deg,#3b82f6,#8b5cf6);width:0%;transition:.3s}
+.sess-item{display:flex;justify-content:space-between;align-items:center;padding:10px;border-bottom:1px solid var(--bd);font-size:12px;direction:ltr}
+.sess-item:last-child{border-bottom:0}
+.row{display:flex;gap:10px;flex-wrap:wrap}
+.row > *{flex:1;min-width:180px}
+</style>
+</head>
+<body>
+<div class="navbar">
+  <h4>🎛 پنل مدیریت Soroush</h4>
+  <div>
+    <span id="sess_top" style="color:var(--muted);margin-left:12px"></span>
+    <a href="/logout" class="btn btn-sm btn-outline-light">خروج</a>
+  </div>
+</div>
+
+<div class="container">
+  <div class="tabs">
+    <div class="tab active" data-tab="dash">📊 داشبورد</div>
+    <div class="tab" data-tab="sess">📁 سشن‌ها</div>
+    <div class="tab" data-tab="send">📨 سندر</div>
+    <div class="tab" data-tab="fwd">📢 فوروارد</div>
+    <div class="tab" data-tab="join">➕ جوینر</div>
+    <div class="tab" data-tab="logs">🧾 لاگ‌ها</div>
+  </div>
+
+  <!-- DASH -->
+  <div class="tabpane" id="tab-dash">
+    <div class="card">
+      <h5>📈 وضعیت کلی</h5>
+      <div class="stats">
+        <div class="stat"><div class="n" id="st_sess">0</div><div class="l">سشن‌ها</div></div>
+        <div class="stat"><div class="n" id="st_healthy">0</div><div class="l">سالم</div></div>
+        <div class="stat"><div class="n" id="st_task">-</div><div class="l">تسک فعلی</div></div>
+        <div class="stat"><div class="n" id="st_prog">0/0</div><div class="l">پیشرفت</div></div>
+      </div>
+      <div class="progress" style="margin-top:16px"><div id="st_bar"></div></div>
+      <div style="margin-top:16px">
+        <button class="btn-main" onclick="runCheck()">🔎 اجرای چکر</button>
+        <button class="btn-warn" onclick="stopTask()">⏹ توقف تسک</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- SESSIONS -->
+  <div class="tabpane" id="tab-sess" style="display:none">
+    <div class="card">
+      <h5>➕ افزودن سشن</h5>
+      <textarea id="sess_input" rows="6" placeholder="هر سشن در یک خط، یا JSON Array"></textarea>
+      <button class="btn-main" onclick="addSessions()">افزودن</button>
+      <button class="btn-danger" onclick="clearSessions()">پاک کردن همه</button>
+    </div>
+    <div class="card">
+      <h5>📁 لیست سشن‌ها <span id="sess_count" style="color:var(--muted)"></span></h5>
+      <div id="sess_list" style="max-height:420px;overflow-y:auto"></div>
+    </div>
+  </div>
+
+  <!-- SEND -->
+  <div class="tabpane" id="tab-send" style="display:none">
+    <div class="card">
+      <h5>📨 ارسال همگانی</h5>
+      <textarea id="send_msg" rows="3" placeholder="متن پیام..."></textarea>
+      <div class="row">
+        <div>
+          <label>حالت حذف</label>
+          <select id="send_del">
+            <option value="2">حذف نشود</option>
+            <option value="1">فقط برای خودم حذف شود</option>
+          </select>
+        </div>
+        <div>
+          <label>تاخیر (ثانیه)</label>
+          <input id="send_delay" type="number" value="2" min="1">
+        </div>
+      </div>
+      <button class="btn-main" onclick="runSend()">شروع ارسال</button>
+    </div>
+  </div>
+
+  <!-- FORWARD -->
+  <div class="tabpane" id="tab-fwd" style="display:none">
+    <div class="card">
+      <h5>📢 فوروارد انبوه</h5>
+      <label>آیدی/یوزرنیم کانال مبدا (بدون @)</label>
+      <input id="fwd_ch" placeholder="Spotifym">
+      <label>Message ID</label>
+      <input id="fwd_mid" type="number" placeholder="90">
+      <div class="row">
+        <div>
+          <label>حالت حذف</label>
+          <select id="fwd_del">
+            <option value="2">حذف نشود</option>
+            <option value="1">فقط برای خودم حذف شود</option>
+          </select>
+        </div>
+        <div>
+          <label>تاخیر (ثانیه)</label>
+          <input id="fwd_delay" type="number" value="1" min="1">
+        </div>
+      </div>
+      <button class="btn-main" onclick="runForward()">شروع فوروارد</button>
+    </div>
+  </div>
+
+  <!-- JOIN -->
+  <div class="tabpane" id="tab-join" style="display:none">
+    <div class="card">
+      <h5>➕ جوینر خودکار</h5>
+      <label>لینکدونی‌ها (با کاما یا خط جدید)</label>
+      <textarea id="join_donors" rows="3" placeholder="ch1,ch2"></textarea>
+      <div class="row">
+        <div>
+          <label>تاخیر (ثانیه)</label>
+          <input id="join_delay" type="number" value="2" min="1">
+        </div>
+        <div>
+          <label>محدودیت اسکن هر کانال</label>
+          <input id="join_limit" type="number" value="50" min="10">
+        </div>
+      </div>
+      <button class="btn-main" onclick="runJoin()">شروع جوین</button>
+    </div>
+  </div>
+
+  <!-- LOGS -->
+  <div class="tabpane" id="tab-logs" style="display:none">
+    <div class="card">
+      <h5>🧾 لاگ‌ها
+        <button class="btn-danger" style="float:left" onclick="clearLogs()">پاک کردن</button>
+      </h5>
+      <div id="logbox"></div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+// Tabs
+document.querySelectorAll('.tab').forEach(t => t.onclick = () => {
+  document.querySelectorAll('.tab').forEach(x => x.classList.remove('active'));
+  t.classList.add('active');
+  document.querySelectorAll('.tabpane').forEach(p => p.style.display = 'none');
+  document.getElementById('tab-' + t.dataset.tab).style.display = 'block';
+});
+
+// --- LOG STREAM ---
+let logCursor = 0;
+async function pollLogs() {
+  try {
+    const r = await fetch('/api/logs?since=' + logCursor);
+    const d = await r.json();
+    const box = document.getElementById('logbox');
+    let added = false;
+    d.items.forEach(x => {
+      const el = document.createElement('div');
+      el.className = 'log-' + (x.level || 'info');
+      el.textContent = `[${x.t}] ${x.text}`;
+      box.appendChild(el);
+      added = true;
+    });
+    if (added) {
+      logCursor = d.total;
+      if (box.children.length > 500) {
+        while (box.children.length > 500) box.removeChild(box.firstChild);
+      }
+      box.scrollTop = box.scrollHeight;
+    }
+  } catch(e) {}
+  setTimeout(pollLogs, 1200);
+}
+pollLogs();
+
+// --- STATE ---
+async function pollState() {
+  try {
+    const r = await fetch('/api/state');
+    const d = await r.json();
+    document.getElementById('st_sess').textContent = d.sessions_count;
+    document.getElementById('st_healthy').textContent = d.healthy_count;
+    document.getElementById('sess_top').textContent = `📁 ${d.sessions_count} سشن`;
+    const t = d.task;
+    document.getElementById('st_task').textContent = t.running ? t.kind : 'آزاد';
+    document.getElementById('st_prog').textContent = `${t.progress}/${t.total}`;
+    const pct = t.total ? (t.progress / t.total * 100) : 0;
+    document.getElementById('st_bar').style.width = pct + '%';
+  } catch(e) {}
+  setTimeout(pollState, 2000);
+}
+pollState();
+
+// --- SESSIONS ---
+async function loadSessions() {
+  const r = await fetch('/api/sessions');
+  const d = await r.json();
+  document.getElementById('sess_count').textContent = `(${d.count})`;
+  const list = document.getElementById('sess_list');
+  list.innerHTML = '';
+  d.items.forEach(it => {
+    const div = document.createElement('div');
+    div.className = 'sess-item';
+    div.innerHTML = `<span>#${it.index+1} | ${it.length} chars | ${it.preview}</span>`;
+    list.appendChild(div);
+  });
+}
+loadSessions();
+
+async function addSessions() {
+  const text = document.getElementById('sess_input').value;
+  if (!text.trim()) return alert('خالی است');
+  const r = await fetch('/api/sessions', {method:'POST', headers:{'Content-Type':'application/json'},
+    body: JSON.stringify({text})});
+  const d = await r.json();
+  if (d.ok) { alert(`✅ ${d.added} اضافه شد. مجموع: ${d.total}`); document.getElementById('sess_input').value=''; loadSessions(); }
+  else alert('خطا: ' + d.msg);
+}
+
+async function clearSessions() {
+  if (!confirm('همه سشن‌ها پاک شوند؟')) return;
+  await fetch('/api/sessions/clear', {method:'POST'});
+  loadSessions();
+}
+
+// --- TASKS ---
+async function runCheck() {
+  const r = await fetch('/api/task/check', {method:'POST'});
+  const d = await r.json();
+  if (!d.ok) alert(d.msg);
+}
+
+async function runSend() {
+  const message = document.getElementById('send_msg').value;
+  const delete_mode = document.getElementById('send_del').value;
+  const delay = parseFloat(document.getElementById('send_delay').value);
+  const r = await fetch('/api/task/send', {method:'POST', headers:{'Content-Type':'application/json'},
+    body: JSON.stringify({message, delete_mode, delay})});
+  const d = await r.json();
+  if (!d.ok) alert(d.msg);
+}
+
+async function runForward() {
+  const channel = document.getElementById('fwd_ch').value;
+  const message_id = document.getElementById('fwd_mid').value;
+  const delete_mode = document.getElementById('fwd_del').value;
+  const delay = parseFloat(document.getElementById('fwd_delay').value);
+  const r = await fetch('/api/task/forward', {method:'POST', headers:{'Content-Type':'application/json'},
+    body: JSON.stringify({channel, message_id, delete_mode, delay})});
+  const d = await r.json();
+  if (!d.ok) alert(d.msg);
+}
+
+async function runJoin() {
+  const donors = document.getElementById('join_donors').value;
+  const delay = parseFloat(document.getElementById('join_delay').value);
+  const scrape_limit = parseInt(document.getElementById('join_limit').value);
+  const r = await fetch('/api/task/join', {method:'POST', headers:{'Content-Type':'application/json'},
+    body: JSON.stringify({donors, delay, scrape_limit})});
+  const d = await r.json();
+  if (!d.ok) alert(d.msg);
+}
+
+async function stopTask() {
+  await fetch('/api/task/stop', {method:'POST'});
+}
+
+async function clearLogs() {
+  await fetch('/api/logs/clear', {method:'POST'});
+  document.getElementById('logbox').innerHTML = '';
+  logCursor = 0;
+}
+</script>
+</body>
+</html>
